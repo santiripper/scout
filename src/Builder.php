@@ -2,9 +2,9 @@
 
 namespace Laravel\Scout;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class Builder
 {
@@ -81,6 +81,40 @@ class Builder
     public function within($index)
     {
         $this->index = $index;
+
+        return $this;
+    }
+
+    /**
+     * Add a constraint to the search query.
+     *
+     * @param  string  $field
+     * @return $this
+     */
+    public function whereExists($field)
+    {
+        $this->wheres[$field] = [
+            'exists' => [
+                'field' => $field
+            ]
+        ];
+
+        return $this;
+    }
+
+    /**
+     * Add a constraint to the search query.
+     *
+     * @param  string  $field
+     * @return $this
+     */
+    public function whereNonExists($field)
+    {
+        $this->wheres[$field] = [
+            'missing' => [
+                'field' => $field
+            ]
+        ];
 
         return $this;
     }
