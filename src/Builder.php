@@ -89,6 +89,40 @@ class Builder
      * Add a constraint to the search query.
      *
      * @param  string  $field
+     * @return $this
+     */
+    public function whereExists($field)
+    {
+        $this->wheres[$field] = [
+            'exists' => [
+                'field' => $field
+            ]
+        ];
+
+        return $this;
+    }
+
+    /**
+     * Add a constraint to the search query.
+     *
+     * @param  string  $field
+     * @return $this
+     */
+    public function whereNonExists($field)
+    {
+        $this->wheres[$field] = [
+            'missing' => [
+                'field' => $field
+            ]
+        ];
+
+        return $this;
+    }
+
+    /**
+     * Add a constraint to the search query.
+     *
+     * @param  string  $field
      * @param  mixed  $value
      * @return $this
      */
