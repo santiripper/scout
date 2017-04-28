@@ -210,9 +210,9 @@ class Builder
 
         $perPage = $perPage ?: $this->model->getPerPage();
 
-        $results = Collection::make($engine->map(
+        $results = $this->model->newCollection($engine->map(
             $rawResults = $engine->paginate($this, $perPage, $page), $this->model
-        ));
+        )->all());
 
         $paginator = (new LengthAwarePaginator($results, $engine->getTotalCount($rawResults), $perPage, $page, [
             'path' => Paginator::resolveCurrentPath(),
