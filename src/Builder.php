@@ -44,6 +44,13 @@ class Builder
     public $wheres = [];
 
     /**
+     * The "filters" constraints added to the query.
+     *
+     * @var array
+     */
+    public $filters = [];
+
+    /**
      * The "limit" that should be applied to the search.
      *
      * @var int
@@ -129,6 +136,19 @@ class Builder
     public function where($field, $value)
     {
         $this->wheres[$field] = $value;
+
+        return $this;
+    }
+
+    /**
+     * Add a filter to the search query.
+     *
+     * @param  mixed  $value
+     * @return $this
+     */
+    public function filter($value)
+    {
+        $this->filters[] = $value;
 
         return $this;
     }
