@@ -239,7 +239,12 @@ class Builder
             'pageName' => $pageName,
         ]));
 
-        return $paginator->appends('query', $this->query);
+        foreach(request()->input() as $param => $value) {
+            $paginator->appends($param, $value);
+        }
+
+        return $paginator;
+        //return $paginator->appends('query', $this->query);
     }
 
     /**
