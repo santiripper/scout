@@ -1,17 +1,23 @@
 <?php
 
-namespace Tests;
+namespace Laravel\Scout\Tests;
 
-use Mockery;
-use Laravel\Scout\Jobs\MakeSearchable;
 use Illuminate\Database\Eloquent\Collection;
+use Laravel\Scout\Jobs\MakeSearchable;
+use Mockery as m;
+use PHPUnit\Framework\TestCase;
 
-class MakeSearchableTest extends AbstractTestCase
+class MakeSearchableTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        m::close();
+    }
+
     public function test_handle_passes_the_collection_to_engine()
     {
         $job = new MakeSearchable($collection = Collection::make([
-            $model = Mockery::mock(),
+            $model = m::mock(),
         ]));
 
         $model->shouldReceive('searchableUsing->update')->with($collection);

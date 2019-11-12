@@ -2,12 +2,12 @@
 
 namespace Laravel\Scout;
 
+use Algolia\AlgoliaSearch\SearchClient as Algolia;
+use Algolia\AlgoliaSearch\Support\UserAgent;
+use Exception;
 use Illuminate\Support\Manager;
-use AlgoliaSearch\Client as Algolia;
-use Laravel\Scout\Engines\NullEngine;
 use Laravel\Scout\Engines\AlgoliaEngine;
-use Laravel\Scout\Engines\ElasticsearchEngine;
-use Elasticsearch\ClientBuilder as Elasticsearch;
+use Laravel\Scout\Engines\NullEngine;
 
 class EngineManager extends Manager
 {
@@ -29,22 +29,32 @@ class EngineManager extends Manager
      */
     public function createAlgoliaDriver()
     {
-        return new AlgoliaEngine(new Algolia(
-            config('scout.algolia.id'), config('scout.algolia.secret')
-        ));
+        $this->ensureAlgoliaClientIsInstalled();
+
+        UserAgent::addCustomUserAgent('Laravel Scout', '7.2.1');
+
+        return new AlgoliaEngine(
+            Algolia::create(config('scout.algolia.id'), config('scout.algolia.secret')),
+            config('scout.soft_delete')
+        );
     }
 
     /**
-     * Create an Elasticsearch engine instance.
+     * Ensure the Algolia API client is installed.
      *
-     * @return \Laravel\Scout\Engines\ElasticsearchEngine
+     * @return void
      */
-    public function createElasticsearchDriver()
+    protected function ensureAlgoliaClientIsInstalled()
     {
-        return new ElasticsearchEngine(
-            Elasticsearch::fromConfig(config('scout.elasticsearch.config')),
-            config('scout.elasticsearch.index')
-        );
+        if (class_exists(Algolia::class)) {
+            return;
+        }
+
+        if (class_exists('AlgoliaSearch\Client')) {
+            throw new Exception('Please upgrade your Algolia client to version: ^2.2.');
+        }
+
+        throw new Exception('Please install the Algolia client: algolia/algoliasearch-client-php.');
     }
 
     /**
@@ -58,12 +68,16 @@ class EngineManager extends Manager
     }
 
     /**
-     * Get the default session driver name.
+     * Get the default Scout driver name.
      *
      * @return string
      */
     public function getDefaultDriver()
     {
+        if (is_null($this->app['config']['scout.driver'])) {
+            return 'null';
+        }
+
         return $this->app['config']['scout.driver'];
     }
 }
