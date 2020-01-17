@@ -1,50 +1,56 @@
 <?php
 
-namespace Tests;
+namespace Laravel\Scout\Tests;
 
-use Laravel\Scout\Stub;
-use Mockery;
-use Tests\Fixtures\SearchableTestModel;
+use Illuminate\Database\Eloquent\Builder;
+use Laravel\Scout\Tests\Fixtures\SearchableModel;
+use Mockery as m;
+use PHPUnit\Framework\TestCase;
 
-class SearchableTest extends AbstractTestCase
+class SearchableTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        m::close();
+    }
+
     public function test_searchable_using_update_is_called_on_collection()
     {
-        $collection = Mockery::mock();
+        $collection = m::mock();
         $collection->shouldReceive('isEmpty')->andReturn(false);
         $collection->shouldReceive('first->searchableUsing->update')->with($collection);
 
-        $model = new SearchableTestModel();
+        $model = new SearchableModel();
         $model->queueMakeSearchable($collection);
     }
 
     public function test_searchable_using_update_is_not_called_on_empty_collection()
     {
-        $collection = Mockery::mock();
+        $collection = m::mock();
         $collection->shouldReceive('isEmpty')->andReturn(true);
         $collection->shouldNotReceive('first->searchableUsing->update');
 
-        $model = new SearchableTestModel();
+        $model = new SearchableModel;
         $model->queueMakeSearchable($collection);
     }
 
     public function test_searchable_using_delete_is_called_on_collection()
     {
-        $collection = Mockery::mock();
+        $collection = m::mock();
         $collection->shouldReceive('isEmpty')->andReturn(false);
         $collection->shouldReceive('first->searchableUsing->delete')->with($collection);
 
-        $model = new SearchableTestModel();
+        $model = new SearchableModel;
         $model->queueRemoveFromSearch($collection);
     }
 
     public function test_searchable_using_delete_is_not_called_on_empty_collection()
     {
-        $collection = Mockery::mock();
+        $collection = m::mock();
         $collection->shouldReceive('isEmpty')->andReturn(true);
         $collection->shouldNotReceive('first->searchableUsing->delete');
 
-        $model = new SearchableTestModel();
+        $model = new SearchableModel;
         $model->queueRemoveFromSearch($collection);
     }
 
@@ -54,39 +60,24 @@ class SearchableTest extends AbstractTestCase
     }
 }
 
-class ModelStubForMakeAllSearchable extends SearchableTestModel
+class ModelStubForMakeAllSearchable extends SearchableModel
 {
     public function newQuery()
     {
-        $mock = \Mockery::mock('Illuminate\Database\Eloquent\Builder');
+        $mock = m::mock(Builder::class);
 
         $mock->shouldReceive('orderBy')
             ->with('id')
             ->andReturnSelf()
             ->shouldReceive('searchable');
 
-        return $mock;
-    }
-}
-
-class ModelStubForRemoveAllFromSearch extends SearchableTestModel
-{
-    public function newQuery()
-    {
-        $mock = \Mockery::mock('Illuminate\Database\Eloquent\Builder');
-
-        $mock->shouldReceive('orderBy')
-            ->with('id')
-            ->andReturnSelf()
-            ->shouldReceive('unsearchable');
+        $mock->shouldReceive('when')->andReturnSelf();
 
         return $mock;
     }
 }
 
 namespace Laravel\Scout;
-
-use Tests\Fixtures\SearchableTestModel;
 
 function config($arg)
 {

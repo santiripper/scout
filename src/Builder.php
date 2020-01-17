@@ -4,10 +4,12 @@ namespace Laravel\Scout;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Traits\Macroable;
 
 class Builder
 {
+    use Macroable;
+
     /**
      * The model instance.
      *
@@ -28,6 +30,13 @@ class Builder
      * @var string
      */
     public $callback;
+
+    /**
+     * Optional callback before model query execution.
+     *
+     * @var \Closure|null
+     */
+    public $queryCallback;
 
     /**
      * The custom index specified for the search.
@@ -69,14 +78,19 @@ class Builder
      *
      * @param  \Illuminate\Database\Eloquent\Model  $model
      * @param  string  $query
-     * @param  Closure  $callback
+     * @param  \Closure  $callback
+     * @param  bool  $softDelete
      * @return void
      */
-    public function __construct($model, $query, $callback = null)
+    public function __construct($model, $query, $callback = null, $softDelete = false)
     {
         $this->model = $model;
         $this->query = $query;
         $this->callback = $callback;
+
+        if ($softDelete) {
+            $this->wheres['__soft_deleted'] = 0;
+        }
     }
 
     /**
@@ -127,6 +141,18 @@ class Builder
     }
 
     /**
+     * Add a filter to the search query.
+     *
+     * @param  mixed  $value
+     * @return $this
+     */
+    public function filter($value)
+    {
+        $this->filters[] = $value;
+        return $this;
+    }
+
+    /**
      * Add a constraint to the search query.
      *
      * @param  string  $field
@@ -141,16 +167,27 @@ class Builder
     }
 
     /**
-     * Add a filter to the search query.
+     * Include soft deleted records in the results.
      *
-     * @param  mixed  $value
      * @return $this
      */
-    public function filter($value)
+    public function withTrashed()
     {
-        $this->filters[] = $value;
+        unset($this->wheres['__soft_deleted']);
 
         return $this;
+    }
+
+    /**
+     * Include only soft deleted records in the results.
+     *
+     * @return $this
+     */
+    public function onlyTrashed()
+    {
+        return tap($this->withTrashed(), function () {
+            $this->wheres['__soft_deleted'] = 1;
+        });
     }
 
     /**
@@ -184,6 +221,59 @@ class Builder
     }
 
     /**
+     * Apply the callback's query changes if the given "value" is true.
+     *
+     * @param  mixed  $value
+     * @param  callable  $callback
+     * @param  callable  $default
+     * @return mixed
+     */
+    public function when($value, $callback, $default = null)
+    {
+        if ($value) {
+            return $callback($this, $value) ?: $this;
+        } elseif ($default) {
+            return $default($this, $value) ?: $this;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Pass the query to a given callback.
+     *
+     * @param  \Closure  $callback
+     * @return $this
+     */
+    public function tap($callback)
+    {
+        return $this->when(true, $callback);
+    }
+
+    /**
+     * Set the callback that should have an opportunity to modify the database query.
+     *
+     * @param  callable  $callback
+     * @return $this
+     */
+    public function query($callback)
+    {
+        $this->queryCallback = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Get the raw results of the search.
+     *
+     * @return mixed
+     */
+    public function raw()
+    {
+        return $this->engine()->search($this);
+    }
+
+    /**
      * Get the keys of search results.
      *
      * @return \Illuminate\Support\Collection
@@ -213,7 +303,6 @@ class Builder
         return $this->engine()->get($this);
     }
 
-
     /**
      * Paginate the given query into a simple paginator.
      *
@@ -231,10 +320,41 @@ class Builder
         $perPage = $perPage ?: $this->model->getPerPage();
 
         $results = $this->model->newCollection($engine->map(
-            $rawResults = $engine->paginate($this, $perPage, $page), $this->model
+            $this, $rawResults = $engine->paginate($this, $perPage, $page), $this->model
         )->all());
 
         $paginator = (new LengthAwarePaginator($results, $engine->getTotalCount($rawResults), $perPage, $page, [
+            'path' => Paginator::resolveCurrentPath(),
+            'pageName' => $pageName,
+        ]));
+
+        foreach(request()->input() as $param => $value) {
+            $paginator->appends($param, $value);
+        }
+
+        return $paginator;
+        //return $paginator->appends('query', $this->query);
+    }
+
+    /**
+     * Paginate the given query into a simple paginator with raw data.
+     *
+     * @param  int  $perPage
+     * @param  string  $pageName
+     * @param  int|null  $page
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function paginateRaw($perPage = null, $pageName = 'page', $page = null)
+    {
+        $engine = $this->engine();
+
+        $page = $page ?: Paginator::resolveCurrentPage($pageName);
+
+        $perPage = $perPage ?: $this->model->getPerPage();
+
+        $results = $engine->paginate($this, $perPage, $page);
+
+        $paginator = (new LengthAwarePaginator($results, $engine->getTotalCount($results), $perPage, $page, [
             'path' => Paginator::resolveCurrentPath(),
             'pageName' => $pageName,
         ]));

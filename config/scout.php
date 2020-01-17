@@ -41,7 +41,36 @@ return [
     |
     */
 
-    'queue' => false,
+    'queue' => env('SCOUT_QUEUE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chunk Sizes
+    |--------------------------------------------------------------------------
+    |
+    | These options allow you to control the maximum chunk size when you are
+    | mass importing data into the search engine. This allows you to fine
+    | tune each of these chunk sizes based on the power of the servers.
+    |
+    */
+
+    'chunk' => [
+        'searchable' => 500,
+        'unsearchable' => 500,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Soft Deletes
+    |--------------------------------------------------------------------------
+    |
+    | This option allows to control whether to keep soft deleted records in
+    | the search indexes. Maintaining soft deleted records can be useful
+    | if your application still needs to search for the records later.
+    |
+    */
+
+    'soft_delete' => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -61,23 +90,13 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Elasticsearch Configuration
+    | Algolia Configuration
     |--------------------------------------------------------------------------
-    |
-    | Here you may configure your settings for Elasticsearch, which is a
-    | distributed, open source search and analytics engine. Feel free
-    | to add as many Elasticsearch servers as required by your app.
-    |
     */
-
     'elasticsearch' => [
         'index' => env('ELASTICSEARCH_INDEX', 'laravel'),
-
-        'config' => [
-            'hosts' => [
-                env('ELASTICSEARCH_HOST', 'localhost'),
-            ],
+        'hosts' => [
+            env('ELASTICSEARCH_HOST', 'http://localhost'),
         ],
     ],
-
 ];
